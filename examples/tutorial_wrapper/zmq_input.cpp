@@ -10,6 +10,7 @@
 #endif
 // OpenPose dependencies
 #include <openpose/headers.hpp>
+#include <map>
 
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -18,6 +19,29 @@
 using namespace std;
 using namespace zmq;
 using namespace nlohmann;
+
+
+std::map<unsigned int, std::string> body_part_map {
+        {0,  "Nose"},
+        {1,  "Neck"},
+        {2,  "RShoulder"},
+        {3,  "RElbow"},
+        {4,  "RWrist"},
+        {5,  "LShoulder"},
+        {6,  "LElbow"},
+        {7,  "LWrist"},
+        {8,  "RHip"},
+        {9,  "RKnee"},
+        {10, "RAnkle"},
+        {11, "LHip"},
+        {12, "LKnee"},
+        {13, "LAnkle"},
+        {14, "REye"},
+        {15, "LEye"},
+        {16, "REar"},
+        {17, "LEar"},
+        {18, "Background"}
+};
 
 
 // See all the available parameter options withe the `--help` flag. E.g. `build/examples/openpose/openpose.bin --help`
@@ -178,6 +202,9 @@ DEFINE_string(write_keypoint_format,    "yml",          "(Deprecated, use `write
                                                         " yaml & yml. Json not available for OpenCV < 3.0, use `write_keypoint_json` instead.");
 DEFINE_string(write_keypoint_json,      "",             "(Deprecated, use `write_json`) Directory to write people pose data in JSON format,"
                                                         " compatible with any OpenCV version.");
+DEFINE_int32(display,                   -1,             "Display mode: -1 for automatic selection; 0 for no display (useful if there is no X server"
+                                                        " and/or to slightly speed up the processing if visual output is not required); 2 for 2-D"
+                                                        " display; 3 for 3-D display (if `--3d` enabled); and 1 for both 2-D and 3-D display.");
 
 
 // If the user needs his own variables, he can inherit the op::Datum struct and add them
@@ -226,78 +253,7 @@ public:
     }
 };
 
-// This worker will just read and return all the jpg files in a directory
-class UserOutputClass
-{
-public:
-    bool display(const std::shared_ptr<std::vector<UserDatum>>& datumsPtr)
-    {
-        // User's displaying/saving/other processing here
-            // datum.cvOutputData: rendered frame with pose or heatmaps
-            // datum.poseKeypoints: Array<float> with the estimated pose
-        char key = ' ';
-        if (datumsPtr != nullptr && !datumsPtr->empty())
-        {
-            cv::imshow("User worker GUI", datumsPtr->at(0).cvOutputData);
-            // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
-            key = (char)cv::waitKey(1);
-        }
-        else
-            op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
-        return (key == 27);
-    }
-    void printKeypoints(const std::shared_ptr<std::vector<UserDatum>>& datumsPtr)
-    {
-        // Example: How to use the pose keypoints
-        if (datumsPtr != nullptr && !datumsPtr->empty())
-        {
-            op::log("\nKeypoints:");
-            // Accesing each element of the keypoints
-            const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
-            op::log("Person pose keypoints:");
-            for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
-            {
-                op::log("Person " + std::to_string(person) + " (x, y, score):");
-                for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
-                {
-                    std::string valueToPrint;
-                    for (auto xyscore = 0 ; xyscore < poseKeypoints.getSize(2) ; xyscore++)
-                        valueToPrint += std::to_string(   poseKeypoints[{person, bodyPart, xyscore}]   ) + " ";
-                    op::log(valueToPrint);
-                }
-            }
-            op::log(" ");
-            // Alternative: just getting std::string equivalent
-            op::log("Face keypoints: " + datumsPtr->at(0).faceKeypoints.toString());
-            op::log("Left hand keypoints: " + datumsPtr->at(0).handKeypoints[0].toString());
-            op::log("Right hand keypoints: " + datumsPtr->at(0).handKeypoints[1].toString());
-            // Heatmaps
-            const auto& poseHeatMaps = datumsPtr->at(0).poseHeatMaps;
-            if (!poseHeatMaps.empty())
-            {
-                op::log("Pose heatmaps size: [" + std::to_string(poseHeatMaps.getSize(0)) + ", "
-                        + std::to_string(poseHeatMaps.getSize(1)) + ", "
-                        + std::to_string(poseHeatMaps.getSize(2)) + "]");
-                const auto& faceHeatMaps = datumsPtr->at(0).faceHeatMaps;
-                op::log("Face heatmaps size: [" + std::to_string(faceHeatMaps.getSize(0)) + ", "
-                        + std::to_string(faceHeatMaps.getSize(1)) + ", "
-                        + std::to_string(faceHeatMaps.getSize(2)) + ", "
-                        + std::to_string(faceHeatMaps.getSize(3)) + "]");
-                const auto& handHeatMaps = datumsPtr->at(0).handHeatMaps;
-                op::log("Left hand heatmaps size: [" + std::to_string(handHeatMaps[0].getSize(0)) + ", "
-                        + std::to_string(handHeatMaps[0].getSize(1)) + ", "
-                        + std::to_string(handHeatMaps[0].getSize(2)) + ", "
-                        + std::to_string(handHeatMaps[0].getSize(3)) + "]");
-                op::log("Right hand heatmaps size: [" + std::to_string(handHeatMaps[1].getSize(0)) + ", "
-                        + std::to_string(handHeatMaps[1].getSize(1)) + ", "
-                        + std::to_string(handHeatMaps[1].getSize(2)) + ", "
-                        + std::to_string(handHeatMaps[1].getSize(3)) + "]");
-            }
-        }
-        else
-            op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
-    }
-};
+
 
 int openPoseTutorialWrapper3()
 {
@@ -394,9 +350,9 @@ int openPoseTutorialWrapper3()
 
     // User processing
     UserInputClass userInputClass;
-    UserOutputClass userOutputClass;
-    bool userWantsToExit = false;
-    while (!userWantsToExit)
+
+
+    while (true)
     {
         bool result = multipart.recv(socket);
 
@@ -405,26 +361,79 @@ int openPoseTutorialWrapper3()
             // get any json meta from client
             std::string json_str_msg = multipart.popstr();
             json root = json::parse(json_str_msg);
-            // TODO: DON do something with meta
 
+            // retrieve image
             message_t msgimg = multipart.pop();
             std::vector<char> vectorBuffer(msgimg.data<char>(),msgimg.data<char>() + msgimg.size());
             cv::Mat frame = cv::imdecode(vectorBuffer,CV_LOAD_IMAGE_ANYCOLOR);
 
+
             // Push frame
             auto datumToProcess = userInputClass.createDatum(frame);
+
+            // extract results and push them to json
+            json jr = {};
+            jr["persons"] = {};
 
             if (datumToProcess != nullptr) {
                 auto successfullyEmplaced = opWrapper.waitAndEmplace(datumToProcess);
                 // Pop frame
                 std::shared_ptr <std::vector<UserDatum>> datumProcessed;
                 if (successfullyEmplaced && opWrapper.waitAndPop(datumProcessed)) {
-                    userWantsToExit = userOutputClass.display(datumProcessed);
-                    userOutputClass.printKeypoints(datumProcessed);
+
+                    // Example: How to use the pose keypoints
+                    if (datumProcessed != nullptr && !datumProcessed->empty()) {
+
+                        const auto &poseKeypoints = datumProcessed->at(0).poseKeypoints;
+
+                        for (auto person = 0; person < poseKeypoints.getSize(0); person++) {
+
+                            json jperson = {};
+                            jperson["person"] = person;
+
+                            for (auto bodyPart = 0; bodyPart < poseKeypoints.getSize(1); bodyPart++) {
+
+                                json body = {};
+                                body["part"] = body_part_map[bodyPart];
+
+                                std::string valueToPrint;
+                                for (auto xyscore = 0; xyscore < poseKeypoints.getSize(2); xyscore++) {
+
+                                    switch(xyscore)
+                                    {
+                                        case 0: {
+                                            body["part"]["x"] = poseKeypoints[{person, bodyPart, xyscore}];
+                                            break;
+                                        }
+                                        case 1: {
+                                            body["part"]["y"] = poseKeypoints[{person, bodyPart, xyscore}];
+                                            break;
+                                        }
+                                        case 2: {
+                                            body["part"]["score"] = poseKeypoints[{person, bodyPart, xyscore}];
+                                            break;
+                                        }
+
+                                    }
+                                }
+
+                                jperson["person"].push_back(body);
+                            }
+
+                            jr["persons"].push_back(jperson);
+                        }
+
+                    }
+
                 } else
                     op::log("Processed datum could not be emplaced.", op::Priority::High,
                             __LINE__, __FUNCTION__, __FILE__);
-            }
+                }
+
+                // send any results or empty json
+            std::string json_results = jr.dump();
+            socket.send((void*)json_results.data(), json_results.size());
+
 
         }
         else
