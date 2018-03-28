@@ -1,7 +1,10 @@
 set(EXAMPLE_FILES 
     1_user_asynchronous_output.cpp
     2_user_synchronous.cpp
-    3_user_asynchronous.cpp)
+    3_user_asynchronous.cpp
+    zmq_input.cpp)
+
+SET(ZMQ_CPP11 1)
   
 include(${CMAKE_SOURCE_DIR}/cmake/Utils.cmake)
 
@@ -17,7 +20,7 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
 
   message(STATUS "Adding Example ${EXE_NAME}")
   add_executable(${EXE_NAME} ${EXAMPLE_FILE})
-  target_link_libraries( ${EXE_NAME} openpose ${GLOG_LIBRARY} ${GFLAGS_LIBRARY} ${Caffe_LIBS} ${MKL_LIBS} ${GLUT_LIBRARY} ${SPINNAKER_LIB} ${CMAKE_THREAD_LIBS_INIT})
+  target_link_libraries( ${EXE_NAME} zmq openpose ${GLOG_LIBRARY} ${GFLAGS_LIBRARY} ${Caffe_LIBS} ${MKL_LIBS} ${GLUT_LIBRARY} ${SPINNAKER_LIB} ${CMAKE_THREAD_LIBS_INIT})
   
   if (WIN32)
     set_property(TARGET ${EXE_NAME} PROPERTY FOLDER "Examples/Tutorial/Wrapper")
