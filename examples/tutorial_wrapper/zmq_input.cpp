@@ -366,6 +366,7 @@ int openPoseTutorialWrapper3()
             message_t msgimg = multipart.pop();
             std::vector<char> vectorBuffer(msgimg.data<char>(),msgimg.data<char>() + msgimg.size());
             cv::Mat frame = cv::imdecode(vectorBuffer,CV_LOAD_IMAGE_ANYCOLOR);
+            multipart.clear();
 
 
             // Push frame
@@ -388,13 +389,12 @@ int openPoseTutorialWrapper3()
 
                         for (auto person = 0; person < poseKeypoints.getSize(0); person++) {
 
-                            json jperson = {};
-                            jperson["person"] = person;
+                            json jperson;
+                            jperson["index"] = person;
 
                             for (auto bodyPart = 0; bodyPart < poseKeypoints.getSize(1); bodyPart++) {
 
-                                json body = {};
-                                body["part"] = body_part_map[bodyPart];
+                                std::string partname = body_part_map[bodyPart];
 
                                 std::string valueToPrint;
                                 for (auto xyscore = 0; xyscore < poseKeypoints.getSize(2); xyscore++) {
@@ -402,26 +402,25 @@ int openPoseTutorialWrapper3()
                                     switch(xyscore)
                                     {
                                         case 0: {
-                                            body["part"]["x"] = poseKeypoints[{person, bodyPart, xyscore}];
+                                            jperson[partname]["x"] = poseKeypoints[{person, bodyPart, xyscore}];;
                                             break;
                                         }
                                         case 1: {
-                                            body["part"]["y"] = poseKeypoints[{person, bodyPart, xyscore}];
+                                            jperson[partname]["y"] = poseKeypoints[{person, bodyPart, xyscore}];
                                             break;
                                         }
                                         case 2: {
-                                            body["part"]["score"] = poseKeypoints[{person, bodyPart, xyscore}];
+                                            jperson[partname]["score"] = poseKeypoints[{person, bodyPart, xyscore}];
                                             break;
                                         }
 
                                     }
                                 }
-
-                                jperson["person"].push_back(body);
                             }
 
                             jr["persons"].push_back(jperson);
                         }
+
 
                     }
 
@@ -434,17 +433,15 @@ int openPoseTutorialWrapper3()
             std::string json_results = jr.dump();
             socket.send((void*)json_results.data(), json_results.size());
 
-
         }
         else
         {
             op::log("Error receiving payload", op::Priority::High,
                    __LINE__, __FUNCTION__, __FILE__);
+            socket.send ("{\"Error\": \"something went wrong\"}",2);
         }
 
-        multipart.clear();
 
-        socket.send ("OK",2);
     }
 
     op::log("Stopping thread(s)", op::Priority::High);
