@@ -1,5 +1,4 @@
-FROM 972025730931.dkr.ecr.us-east-1.amazonaws.com/opencv:opencv_ffmpeg_cuda
-
+FROM tolleybot/cuda_opencv_ffmpeg
 
 RUN apt-get update
 RUN apt-get install -y \
