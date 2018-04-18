@@ -421,6 +421,58 @@ int openPoseTutorialWrapper3()
                             jr["persons"].push_back(jperson);
                         }
 
+                        const auto &faceKeypoints = datumProcessed->at(0).faceKeypoints;
+
+                        // face
+                        for (auto person = 0; person < faceKeypoints.getSize(0); person++) {
+
+                            json face = jperson["index"]["face"];
+
+                            const auto numberFaceParts = faceKeypoints.getSize(1);
+
+                            for (auto facePart = 0; facePart < numberFaceParts; facePart++) {
+
+                                json part;
+                                part["index"] = facePart;
+                                part["x"] = faceKeypoints[{person, facePart, 0}];
+                                part["y"] = faceKeypoints[{person, facePart, 1}];
+                                part["score"] = faceKeypoints[{person, facePart, 2}];
+                                face.push_back(part);
+
+                            }
+                        }
+
+                        // hands
+                        const auto &handKeypoints = datumProcessed->at(0).handKeypoints;
+                        const auto numberPeopleDetected = handKeypoints[0].getSize(0);
+                        const auto numberHandParts = handKeypoints[0].getSize(1);
+
+                        for (auto person = 0; person < numberPeopleDetected; person++) {
+
+                            json h = jperson["index"]["hands"];
+
+                            for (auto handPart = 0; handPart < numberHandParts; handPart++) {
+
+                                h["index"] = handPart;
+
+                                json partL;
+                                partL["index"] = handPart;
+                                partL["x"] = handKeypoints[0][{person, handPart, 0}];
+                                partL["y"] = handKeypoints[0][{person, handPart, 1}];
+                                partL["score"] = handKeypoints[0][{person, handPart, 2}];
+                                h["left"] = partL;
+
+                                json partR;
+                                partR["index"] = handPart;
+                                partR["x"] = handKeypoints[1][{person, handPart, 0}];
+                                partR["y"] = handKeypoints[1][{person, handPart, 1}];
+                                partR["score"] = handKeypoints[1][{person, handPart, 2}];
+                                h["right"] = partR;
+
+
+                            }
+                        }
+
 
                     }
 
